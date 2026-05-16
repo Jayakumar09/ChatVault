@@ -1,0 +1,18 @@
+import mongoose from 'mongoose';
+
+const mediaFileSchema = new mongoose.Schema({
+  contactId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contact', required: true },
+  messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
+  filename: { type: String, required: true },
+  originalName: { type: String, required: true },
+  mimetype: { type: String, required: true },
+  size: { type: Number, required: true },
+  path: { type: String, required: true },
+  type: { type: String, enum: ['image', 'video', 'audio', 'document'], required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+mediaFileSchema.index({ contactId: 1 });
+mediaFileSchema.index({ type: 1 });
+
+export default mongoose.model('MediaFile', mediaFileSchema);
