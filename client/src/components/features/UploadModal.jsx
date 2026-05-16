@@ -1,22 +1,66 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, File, X, CheckCircle, Loader, AlertCircle } from 'lucide-react';
+import { Upload, File, X, CheckCircle, Loader, AlertCircle, Image, MessageSquare, Users } from 'lucide-react';
 import Modal from '../ui/Modal';
 import { useApp } from '../../context/AppContext';
+import api from '../../services/api';
 
 const UploadModal = () => {
-  const { uploadModalOpen, setUploadModalOpen, uploadBackup } = useApp();
+  const { uploadModalOpen, setUploadModalOpen, refreshData } = useApp();
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [currentPhase, setCurrentPhase] = useState('');
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
+  const [importResult, setImportResult] = useState(null);
+  const [backupId, setBackupId] = useState(null);
+
+  useEffect(() => {
+    let pollInterval;
+    if (backupId && status === 'parsing') {
+      pollInterval = setInterval(async () => {
+        try {
+          const response = await api.get(`/backup/status/${backupId}`);
+          const { progress: prog, currentPhase: phase, status: stat, totalContacts, totalMessages, totalMedia } = response.data.backup;
+
+          setProgress(prog || 0);
+          setCurrentPhase(phase || 'Processing...');
+
+          if (stat === 'completed') {
+            setStatus('success');
+            setProgress(100);
+            setCurrentPhase('Import complete!');
+            setImportResult({ totalContacts, totalMessages, totalMedia });
+            setBackupId(null);
+            refreshData();
+          } else if (stat === 'failed') {
+            setStatus('error');
+            setError('Import failed');
+            setBackupId(null);
+          }
+        } catch (e) {
+          console.error('Polling error:', e);
+        }
+      }, 1000);
+    }
+    return () => clearInterval(pollInterval);
+  }, [backupId, status, refreshData]);
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) {
-      setFile(acceptedFiles[0]);
+      const f = acceptedFiles[0];
+
+      if (f.size > 500 * 1024 * 1024) {
+        setError('File size exceeds 500MB limit');
+        return;
+      }
+
+      setFile(f);
       setError(null);
+      setStatus(null);
+      setImportResult(null);
     }
   }, []);
 
@@ -26,7 +70,8 @@ const UploadModal = () => {
       'application/zip': ['.zip'],
       'application/x-zip-compressed': ['.zip']
     },
-    maxFiles: 1
+    maxFiles: 1,
+    disabled: uploading
   });
 
   const handleUpload = async () => {
@@ -34,51 +79,79 @@ const UploadModal = () => {
 
     setUploading(true);
     setProgress(0);
+    setCurrentPhase('Uploading file...');
     setStatus('uploading');
+    setError(null);
 
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(interval);
-          return 90;
+    try {
+      const formData = new FormData();
+      formData.append('backup', file);
+
+      const uploadResponse = await api.post('/backup/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setProgress(Math.min(percent, 90));
         }
-        return prev + 10;
       });
-    }, 200);
 
-    const result = await uploadBackup(file);
+      if (!uploadResponse.data.success) {
+        throw new Error(uploadResponse.data.error || 'Upload failed');
+      }
 
-    clearInterval(interval);
-    setProgress(100);
+      const { backup } = uploadResponse.data;
+      setBackupId(backup._id);
+      setStatus('parsing');
+      setCurrentPhase('Processing backup...');
 
-    if (result.success) {
-      setStatus('success');
-      setTimeout(() => {
-        setUploadModalOpen(false);
-        resetState();
-      }, 2000);
-    } else {
+      const parseResponse = await api.post('/backup/parse', { backupId: backup._id });
+
+      if (parseResponse.data.success) {
+        setStatus('success');
+        setProgress(100);
+        setCurrentPhase('Import complete!');
+        setImportResult(parseResponse.data.result);
+        refreshData();
+      }
+
+    } catch (err) {
+      console.error('Upload error:', err);
       setStatus('error');
-      setError(result.error || 'Upload failed');
-    }
 
-    setUploading(false);
+      if (err.response?.status === 409) {
+        setError(err.response.data.error);
+      } else {
+        setError(err.response?.data?.error || err.message || 'Import failed');
+      }
+    } finally {
+      setUploading(false);
+    }
   };
 
   const resetState = () => {
     setFile(null);
     setProgress(0);
+    setCurrentPhase('');
     setStatus(null);
     setError(null);
+    setImportResult(null);
+    setBackupId(null);
   };
 
   const handleClose = () => {
-    setUploadModalOpen(false);
-    resetState();
+    if (!uploading) {
+      setUploadModalOpen(false);
+      resetState();
+    }
   };
 
   return (
-    <Modal isOpen={uploadModalOpen} onClose={handleClose} title="Import WhatsApp Backup" size="md">
+    <Modal
+      isOpen={uploadModalOpen}
+      onClose={handleClose}
+      title="Import WhatsApp Backup"
+      size="md"
+    >
       <div className="space-y-6">
         {!file ? (
           <div
@@ -98,7 +171,7 @@ const UploadModal = () => {
               Drag and drop your WhatsApp chat export ZIP file here
             </p>
             <p className="text-xs text-text-tertiary">
-              Supported format: .zip (exported from WhatsApp)
+              Supported format: .zip (max 500MB)
             </p>
           </div>
         ) : (
@@ -123,32 +196,55 @@ const UploadModal = () => {
               )}
             </div>
 
-            {uploading && (
-              <div className="mt-4">
+            {(status === 'uploading' || status === 'parsing') && (
+              <div className="mt-4 space-y-3">
                 <div className="h-2 bg-background-tertiary rounded-full overflow-hidden">
                   <motion.div
                     className="h-full gradient-bg"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.3 }}
                   />
                 </div>
-                <p className="mt-2 text-sm text-text-secondary flex items-center gap-2">
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Processing backup...
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-text-secondary flex items-center gap-2">
+                    <Loader className="w-4 h-4 animate-spin" />
+                    {currentPhase || 'Processing...'}
+                  </p>
+                  <span className="text-sm text-text-tertiary">{progress}%</span>
+                </div>
               </div>
             )}
 
-            {status === 'success' && (
-              <div className="mt-4 p-3 bg-success/10 rounded-xl flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-success" />
-                <span className="text-sm text-success">Backup imported successfully!</span>
+            {status === 'success' && importResult && (
+              <div className="mt-4 space-y-3">
+                <div className="p-3 bg-success/10 rounded-xl flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-success" />
+                  <span className="text-sm text-success font-medium">Import completed successfully!</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center p-3 bg-background-tertiary rounded-xl">
+                    <Users className="w-5 h-5 text-accent-primary mx-auto mb-1" />
+                    <p className="text-lg font-bold text-text-primary">{importResult.totalContacts}</p>
+                    <p className="text-xs text-text-tertiary">Contacts</p>
+                  </div>
+                  <div className="text-center p-3 bg-background-tertiary rounded-xl">
+                    <MessageSquare className="w-5 h-5 text-accent-secondary mx-auto mb-1" />
+                    <p className="text-lg font-bold text-text-primary">{importResult.totalMessages?.toLocaleString()}</p>
+                    <p className="text-xs text-text-tertiary">Messages</p>
+                  </div>
+                  <div className="text-center p-3 bg-background-tertiary rounded-xl">
+                    <Image className="w-5 h-5 text-pink-400 mx-auto mb-1" />
+                    <p className="text-lg font-bold text-text-primary">{importResult.totalMedia}</p>
+                    <p className="text-xs text-text-tertiary">Media</p>
+                  </div>
+                </div>
               </div>
             )}
 
             {status === 'error' && (
               <div className="mt-4 p-3 bg-error/10 rounded-xl flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-error" />
+                <AlertCircle className="w-5 h-5 text-error flex-shrink-0" />
                 <span className="text-sm text-error">{error}</span>
               </div>
             )}
@@ -173,13 +269,22 @@ const UploadModal = () => {
           </div>
         )}
 
+        {status === 'success' && (
+          <button
+            onClick={handleClose}
+            className="w-full px-4 py-3 rounded-xl gradient-bg text-white font-medium hover:shadow-glow transition-shadow"
+          >
+            Done
+          </button>
+        )}
+
         <div className="p-4 rounded-xl bg-background-tertiary/50">
           <h4 className="text-sm font-semibold text-text-primary mb-2">How to export WhatsApp chat</h4>
           <ol className="text-sm text-text-secondary space-y-1 list-decimal list-inside">
-            <li>Open WhatsApp and go to the chat you want to export</li>
-            <li>Tap More options → More → Export chat</li>
-            <li>Choose "Include media" to get the full backup</li>
-            <li>Select a sharing method and save as ZIP</li>
+            <li>Open WhatsApp → Select a chat</li>
+            <li>Tap More (⋮) → Export chat</li>
+            <li>Choose "Include media" for full backup</li>
+            <li>Share via email or save to Files</li>
             <li>Upload the ZIP file here</li>
           </ol>
         </div>

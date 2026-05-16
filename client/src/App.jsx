@@ -6,6 +6,7 @@ import Navbar from './components/layout/Navbar';
 import RightPanel from './components/layout/RightPanel';
 import Dashboard from './pages/Dashboard';
 import Contacts from './pages/Contacts';
+import Conversation from './pages/Conversation';
 import Media from './pages/Media';
 import Timeline from './pages/Timeline';
 import Starred from './pages/Starred';
@@ -37,7 +38,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/contacts" element={<Contacts onSelectContact={setSelectedContact} />} />
-                  <Route path="/contacts/:id" element={<Contacts onSelectContact={setSelectedContact} />} />
+                  <Route path="/contacts/:id" element={<Conversation />} />
                   <Route path="/media" element={<Media />} />
                   <Route path="/media/:type" element={<Media />} />
                   <Route path="/timeline" element={<Timeline />} />
