@@ -18,8 +18,17 @@ api.interceptors.response.use(
     if (status === 401 && isAuthCheck) {
       return Promise.reject(error);
     }
+
+    if (status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
+
+    if (status === 500 || !error.response) {
+      console.error('Server Error:', error.response?.data || error.message);
+    }
     
-    console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
 );

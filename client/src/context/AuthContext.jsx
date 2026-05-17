@@ -31,7 +31,11 @@ export const AuthProvider = ({ children }) => {
       const response = await api.get('/auth/me');
       setUser(response.data.user);
     } catch (error) {
-      logout();
+      if (error.response?.status === 401) {
+        logout();
+      } else {
+        console.error('Auth validation failed:', error.message);
+      }
     } finally {
       setLoading(false);
     }
