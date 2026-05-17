@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MessageSquare, Image, Phone, Mail, Filter } from 'lucide-react';
@@ -7,7 +7,7 @@ import { mockMessages, formatNumber } from '../services/mockData';
 import Card from '../components/ui/Card';
 import { CardSkeleton } from '../components/ui/Skeleton';
 
-const ContactCard = ({ contact, onClick, isSelected }) => {
+const ContactCard = React.forwardRef(({ contact, onClick, isSelected }, ref) => {
   const formatDate = (date) => {
     const now = new Date();
     const d = new Date(date);
@@ -22,6 +22,7 @@ const ContactCard = ({ contact, onClick, isSelected }) => {
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -56,7 +57,9 @@ const ContactCard = ({ contact, onClick, isSelected }) => {
       </div>
     </motion.div>
   );
-};
+});
+
+ContactCard.displayName = 'ContactCard';
 
 const MessageList = ({ contact, messages, onClose }) => {
   const formatTime = (date) => {

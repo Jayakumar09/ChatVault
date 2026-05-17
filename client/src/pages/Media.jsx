@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Image, Video, Music, FileText, Grid, List, Download, Eye, X, Copy } from 'lucide-react';
@@ -98,7 +98,7 @@ const formatDate = (date) => {
   });
 };
 
-const MediaCard = ({ media, onPreview }) => {
+const MediaCard = React.forwardRef(({ media, onPreview }, ref) => {
   const getIcon = () => {
     const icons = {
       image: Image,
@@ -151,6 +151,7 @@ const MediaCard = ({ media, onPreview }) => {
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -232,7 +233,9 @@ const MediaCard = ({ media, onPreview }) => {
       </div>
     </motion.div>
   );
-};
+});
+
+MediaCard.displayName = 'MediaCard';
 
 const Lightbox = ({ media, onClose }) => {
   if (!media) return null;
