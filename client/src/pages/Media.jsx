@@ -37,6 +37,11 @@ const MediaCard = ({ media, onPreview }) => {
     return colors[media.type] || 'bg-gray-500/20 text-gray-400';
   };
 
+  const getMediaUrl = () => {
+    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    return `${baseUrl}/${media.path}`;
+  };
+
   return (
     <motion.div
       layout
@@ -48,7 +53,16 @@ const MediaCard = ({ media, onPreview }) => {
     >
       {media.type === 'image' ? (
         <div className="aspect-square bg-background-card">
-          <div className="w-full h-full bg-gradient-to-br from-accent-primary/20 to-accent-secondary/20 flex items-center justify-center">
+          <img
+            src={getMediaUrl()}
+            alt={media.originalName}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
+          />
+          <div className="w-full h-full bg-gradient-to-br from-accent-primary/20 to-accent-secondary/20 flex items-center justify-center hidden">
             <Image className="w-12 h-12 text-accent-primary/50" />
           </div>
         </div>
@@ -79,6 +93,11 @@ const MediaCard = ({ media, onPreview }) => {
 const Lightbox = ({ media, onClose }) => {
   if (!media) return null;
 
+  const getMediaUrl = () => {
+    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    return `${baseUrl}/${media.path}`;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -101,21 +120,27 @@ const Lightbox = ({ media, onClose }) => {
         onClick={(e) => e.stopPropagation()}
       >
         {media.type === 'image' ? (
-          <div className="aspect-video bg-background-card rounded-2xl flex items-center justify-center">
-            <Image className="w-24 h-24 text-accent-primary/50" />
-          </div>
+          <img
+            src={getMediaUrl()}
+            alt={media.originalName}
+            className="w-full h-full object-contain rounded-2xl"
+          />
         ) : media.type === 'video' ? (
-          <div className="aspect-video bg-background-card rounded-2xl flex items-center justify-center">
-            <Video className="w-24 h-24 text-purple-500/50" />
-          </div>
+          <video
+            src={getMediaUrl()}
+            controls
+            className="w-full max-h-[80vh] rounded-2xl"
+          />
         ) : media.type === 'audio' ? (
           <div className="bg-background-card rounded-2xl p-8 flex items-center justify-center">
-            <div className="text-center">
+            <div className="text-center max-w-md w-full">
               <Music className="w-16 h-16 text-cyan-500 mx-auto mb-4" />
               <p className="text-text-primary font-medium">{media.originalName}</p>
-              <div className="mt-4 h-2 bg-background-tertiary rounded-full overflow-hidden">
-                <div className="w-1/3 h-full gradient-bg" />
-              </div>
+              <audio
+                src={getMediaUrl()}
+                controls
+                className="w-full mt-4"
+              />
             </div>
           </div>
         ) : (

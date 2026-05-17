@@ -297,7 +297,7 @@ export const extractMediaFiles = async (backupDir, backupId, userId, progressCal
                 originalName: item,
                 mimetype,
                 size,
-                path: `uploads/${userId}/${filename}`,
+                path: `${userId}/${filename}`,
                 type,
                 metadata: {
                   backupId,
