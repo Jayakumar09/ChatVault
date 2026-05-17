@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Preferences from './pages/Preferences';
+import Backups from './pages/Backups';
 import Sidebar from './components/layout/Sidebar';
 import Navbar from './components/layout/Navbar';
 import RightPanel from './components/layout/RightPanel';
@@ -52,6 +53,7 @@ function AppLayout() {
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/preferences" element={<Preferences />} />
+                  <Route path="/backups" element={<Backups />} />
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </AnimatePresence>

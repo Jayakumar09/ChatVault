@@ -22,6 +22,7 @@ const navItems = [
   { path: '/media/documents', icon: FileText, label: 'Documents' },
   { path: '/media/audio', icon: Music, label: 'Audio' },
   { path: '/media/videos', icon: Video, label: 'Videos' },
+  { path: '/backups', icon: Archive, label: 'Backups' },
   { path: '/timeline', icon: Clock, label: 'Timeline' },
   { path: '/starred', icon: Star, label: 'Starred' },
   { path: '/settings', icon: Settings, label: 'Settings' }
