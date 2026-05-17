@@ -121,7 +121,8 @@ const MediaCard = ({ media, onPreview }) => {
 
   const getMediaUrl = () => {
     const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    return `${baseUrl}/${media.path}`;
+    const cleanPath = media.path.replace(/^\/+/, '');
+    return `${baseUrl}/uploads/${cleanPath}`;
   };
 
   const handleDownload = (e) => {
@@ -238,7 +239,8 @@ const Lightbox = ({ media, onClose }) => {
 
   const getMediaUrl = () => {
     const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    return `${baseUrl}/${media.path}`;
+    const cleanPath = media.path.replace(/^\/+/, '');
+    return `${baseUrl}/uploads/${cleanPath}`;
   };
 
   return (
