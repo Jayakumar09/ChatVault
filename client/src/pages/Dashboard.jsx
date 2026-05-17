@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
-import { TrendingUp, Archive, Clock, Star, Wifi, WifiOff, AlertCircle, Database } from 'lucide-react';
+import { TrendingUp, Archive, Clock, Star, Wifi, WifiOff, AlertCircle, Database, HardDrive, Calendar } from 'lucide-react';
 import { AnalyticsCards, MediaStatsChart, TopContacts, ActivityChart } from '../components/features/Analytics';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { CardSkeleton } from '../components/ui/Skeleton';
 
 const ConnectionStatus = () => {
@@ -68,6 +69,7 @@ const EmptyState = () => {
 
 const Dashboard = () => {
   const { dashboardData, loading, dbConnected } = useApp();
+  const { user } = useAuth();
 
   const hasData = dashboardData && (
     dashboardData.totalContacts > 0 ||
@@ -82,6 +84,13 @@ const Dashboard = () => {
     { label: 'Timeline', value: 'View All', icon: Clock, color: 'from-violet-500 to-purple-500', isLink: true }
   ];
 
+  const formatBytes = (bytes) => {
+    if (!bytes) return '0 B';
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -89,12 +98,28 @@ const Dashboard = () => {
       exit={{ opacity: 0 }}
       className="space-y-6"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary">Dashboard</h1>
+          <h1 className="text-3xl font-bold text-text-primary">
+            Welcome back, {user?.username || 'User'} 👋
+          </h1>
           <p className="text-text-secondary mt-1">Your chat archive at a glance</p>
         </div>
-        <ConnectionStatus />
+        <div className="flex items-center gap-3">
+          {dashboardData && (
+            <>
+              <div className="flex items-center gap-2 px-3 py-2 bg-background-secondary rounded-xl border border-border">
+                <HardDrive className="w-4 h-4 text-accent-primary" />
+                <span className="text-sm text-text-secondary">{formatBytes(dashboardData.storageUsed || 0)}</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-background-secondary rounded-xl border border-border">
+                <Archive className="w-4 h-4 text-accent-secondary" />
+                <span className="text-sm text-text-secondary">{dashboardData.totalBackups || 0} backups</span>
+              </div>
+            </>
+          )}
+          <ConnectionStatus />
+        </div>
       </div>
 
       {!dbConnected && !loading ? (

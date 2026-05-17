@@ -94,4 +94,71 @@ router.post('/logout', (req, res) => {
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
+router.put('/profile', authMiddleware, async (req, res) => {
+  try {
+    const { username, email, preferences } = req.body;
+    const user = req.user;
+
+    if (username && username !== user.username) {
+      const existing = await User.findOne({ username });
+      if (existing) {
+        return res.status(400).json({ error: 'Username already taken' });
+      }
+      user.username = username;
+    }
+
+    if (email && email !== user.email) {
+      const existing = await User.findOne({ email });
+      if (existing) {
+        return res.status(400).json({ error: 'Email already registered' });
+      }
+      user.email = email;
+    }
+
+    if (preferences) {
+      user.preferences = { ...user.preferences, ...preferences };
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Profile updated',
+      user: user.toJSON()
+    });
+  } catch (error) {
+    console.error('Update profile error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    const user = await User.findById(req.userId);
+    const isMatch = await user.comparePassword(currentPassword);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Update password error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

@@ -64,8 +64,28 @@ export const AuthProvider = ({ children }) => {
     delete api.defaults.headers.common['Authorization'];
   };
 
+  const updateProfile = async (updates) => {
+    try {
+      const response = await api.put('/auth/profile', updates);
+      setUser(response.data.user);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const refreshUser = async () => {
+    try {
+      const response = await api.get('/auth/me');
+      setUser(response.data.user);
+      return response.data.user;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateProfile, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

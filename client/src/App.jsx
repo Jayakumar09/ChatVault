@@ -6,6 +6,8 @@ import { AppProvider } from './context/AppContext';
 import ProtectedRoute from './components/routes/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Profile from './pages/Profile';
+import Preferences from './pages/Preferences';
 import Sidebar from './components/layout/Sidebar';
 import Navbar from './components/layout/Navbar';
 import RightPanel from './components/layout/RightPanel';
@@ -48,6 +50,8 @@ function AppLayout() {
                   <Route path="/timeline" element={<Timeline />} />
                   <Route path="/starred" element={<Starred />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/preferences" element={<Preferences />} />
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </AnimatePresence>

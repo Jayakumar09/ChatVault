@@ -22,6 +22,16 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
+  avatar: {
+    type: String,
+    default: ''
+  },
+  preferences: {
+    theme: { type: String, default: 'dark' },
+    notifications: { type: Boolean, default: true },
+    language: { type: String, default: 'en' },
+    autoOrganize: { type: Boolean, default: true }
+  },
   createdAt: {
     type: Date,
     default: Date.now
