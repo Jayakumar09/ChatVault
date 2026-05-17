@@ -91,6 +91,7 @@ export const uploadBackup = async (req, res) => {
       status: 'uploaded'
     });
     await backup.save();
+    await backup.save();
 
     console.log(`✅ Backup created: ${backup._id}`);
 
@@ -145,8 +146,9 @@ export const parseBackup = async (req, res) => {
     console.log(`\n📦 Processing backup: ${backup.originalName}`);
     console.log(`   ID: ${backupId}`);
 
-    const zipPath = path.join(__dirname, '../backups', backup.filename);
-    extractDir = path.join(__dirname, '../backups', backupId);
+    const userIdDir = req.userId?.toString() || 'public';
+    const zipPath = path.join(__dirname, '../backups', userIdDir, backup.filename);
+    extractDir = path.join(__dirname, '../backups', userIdDir, backupId);
 
     if (fs.existsSync(extractDir)) {
       fs.rmSync(extractDir, { recursive: true, force: true });
@@ -184,7 +186,7 @@ export const parseBackup = async (req, res) => {
     const chatContent = fs.readFileSync(chatFilePath, 'utf-8');
     console.log(`   📝 Parsing ${chatContent.split('\n').length} lines...`);
 
-    const parseResult = await parseWhatsAppChat(chatContent, extractDir, backupId, (progress) => {
+    const parseResult = await parseWhatsAppChat(chatContent, extractDir, backupId, req.userId, (progress) => {
       if (backup) {
         const mappedProgress = 20 + Math.round(progress.percentage * 0.5);
         backup.progress = Math.min(mappedProgress, 70);
@@ -200,7 +202,7 @@ export const parseBackup = async (req, res) => {
     await backup.save();
 
     console.log('   🎬 Extracting media...');
-    const mediaFiles = await extractMediaFiles(extractDir, backupId, (progress) => {
+    const mediaFiles = await extractMediaFiles(extractDir, backupId, req.userId, (progress) => {
       if (backup) {
         backup.progress = 75 + Math.round(progress.count * 0.2);
         backup.currentPhase = `Processing media (${progress.count} files)...`;

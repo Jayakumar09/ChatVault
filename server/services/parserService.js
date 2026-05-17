@@ -13,6 +13,9 @@ const WHATSAPP_DATE_PATTERNS = [
 
 const MESSAGE_PATTERN = /^((?:\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}|\[\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}),?\s*(?:\d{1,2}:\d{2}(?::\d{2})?\s*(?:am|pm|AM|PM)?)?)\s*[-–]\s*(.+?):\s*(.+)$/i;
 
+let currentUserId = null;
+let currentBackupId = null;
+
 const MEDIA_PATTERNS = [
   /<Media omitted>/i,
   /<image omitted>/i,
@@ -119,7 +122,10 @@ const getMimeType = (ext) => {
   return mimeTypes[ext] || 'application/octet-stream';
 };
 
-export const parseWhatsAppChat = async (chatContent, backupDir, backupId, progressCallback) => {
+export const parseWhatsAppChat = async (chatContent, backupDir, backupId, userId, progressCallback) => {
+  currentUserId = userId;
+  currentBackupId = backupId;
+
   const lines = chatContent.split(/\r?\n/).filter(line => line.trim());
   const totalLines = lines.length;
 
@@ -129,7 +135,6 @@ export const parseWhatsAppChat = async (chatContent, backupDir, backupId, progre
   let currentContact = null;
   let currentMessage = '';
   let currentTimestamp = null;
-  let lineBuffer = '';
 
   const updateProgress = (current, total, phase) => {
     if (progressCallback) {
@@ -152,6 +157,7 @@ export const parseWhatsAppChat = async (chatContent, backupDir, backupId, progre
       if (currentContact && currentMessage.trim()) {
         const msgContent = currentMessage.trim();
         messagesToInsert.push({
+          userId,
           contactId: currentContact._id,
           content: msgContent,
           timestamp: currentTimestamp || new Date(),
@@ -168,11 +174,12 @@ export const parseWhatsAppChat = async (chatContent, backupDir, backupId, progre
 
       const senderName = sender.trim();
       if (!contactsMap.has(senderName)) {
-        const existingContact = await Contact.findOne({ name: senderName });
+        const existingContact = await Contact.findOne({ userId, name: senderName });
         if (existingContact) {
           contactsMap.set(senderName, existingContact);
         } else {
           const newContact = new Contact({
+            userId,
             name: senderName,
             phone: '',
             createdAt: new Date()
@@ -190,6 +197,7 @@ export const parseWhatsAppChat = async (chatContent, backupDir, backupId, progre
 
   if (currentContact && currentMessage.trim()) {
     messagesToInsert.push({
+      userId,
       contactId: currentContact._id,
       content: currentMessage.trim(),
       timestamp: currentTimestamp || new Date(),
@@ -210,9 +218,9 @@ export const parseWhatsAppChat = async (chatContent, backupDir, backupId, progre
   }
 
   for (const [name, contact] of contactsMap) {
-    const messageCount = await Message.countDocuments({ contactId: contact._id });
-    const lastMessage = await Message.findOne({ contactId: contact._id }).sort({ timestamp: -1 });
-    const mediaCount = await MediaFile.countDocuments({ contactId: contact._id });
+    const messageCount = await Message.countDocuments({ userId, contactId: contact._id });
+    const lastMessage = await Message.findOne({ userId, contactId: contact._id }).sort({ timestamp: -1 });
+    const mediaCount = await MediaFile.countDocuments({ userId, contactId: contact._id });
 
     await Contact.findByIdAndUpdate(contact._id, {
       totalMessages: messageCount,
@@ -233,7 +241,7 @@ export const parseWhatsAppChat = async (chatContent, backupDir, backupId, progre
   };
 };
 
-export const extractMediaFiles = async (backupDir, backupId, progressCallback) => {
+export const extractMediaFiles = async (backupDir, backupId, userId, progressCallback) => {
   const mediaFiles = [];
   const supportedExtensions = [
     '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp',
@@ -242,7 +250,7 @@ export const extractMediaFiles = async (backupDir, backupId, progressCallback) =
     '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt'
   ];
 
-  const uploadDir = path.join(process.cwd(), 'server/uploads', backupId);
+  const uploadDir = path.join(process.cwd(), 'uploads', userId.toString());
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
@@ -280,11 +288,12 @@ export const extractMediaFiles = async (backupDir, backupId, progressCallback) =
             const size = stat.size;
 
             const mediaFile = new MediaFile({
+              userId,
               filename,
               originalName: item,
               mimetype,
               size,
-              path: `/uploads/${backupId}/${filename}`,
+              path: `uploads/${userId}/${filename}`,
               type,
               metadata: {
                 backupId,
