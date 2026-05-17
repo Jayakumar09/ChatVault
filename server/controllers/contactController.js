@@ -35,6 +35,7 @@ export const getContactMessages = async (req, res) => {
     }
 
     const messages = await Message.find({ contactId: id, userId: req.userId })
+      .populate('contactId', 'name avatar')
       .sort({ timestamp: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
