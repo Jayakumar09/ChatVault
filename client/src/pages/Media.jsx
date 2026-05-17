@@ -9,10 +9,10 @@ import { MediaGridSkeleton } from '../components/ui/Skeleton';
 
 const tabs = [
   { id: 'all', label: 'All Media', icon: Grid },
-  { id: 'image', label: 'Images', icon: Image },
-  { id: 'video', label: 'Videos', icon: Video },
+  { id: 'images', label: 'Images', icon: Image },
+  { id: 'videos', label: 'Videos', icon: Video },
   { id: 'audio', label: 'Audio', icon: Music },
-  { id: 'document', label: 'Documents', icon: FileText }
+  { id: 'documents', label: 'Documents', icon: FileText }
 ];
 
 const getDocIcon = (filename) => {
@@ -304,11 +304,22 @@ const Lightbox = ({ media, onClose }) => {
   );
 };
 
+const normalizeType = (type) => {
+  const map = {
+    documents: 'document',
+    images: 'image',
+    videos: 'video',
+    audios: 'audio'
+  };
+  return map[type] || type;
+};
+
 const Media = () => {
   const { type } = useParams();
   const navigate = useNavigate();
   const { media, loading } = useApp();
-  const [activeTab, setActiveTab] = useState(type || 'all');
+  const normalizedType = type ? normalizeType(type) : 'all';
+  const [activeTab, setActiveTab] = useState(normalizedType);
   const [viewMode, setViewMode] = useState('grid');
   const [selectedMedia, setSelectedMedia] = useState(null);
 
