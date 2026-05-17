@@ -15,43 +15,17 @@ export const AppProvider = ({ children }) => {
   const [media, setMedia] = useState([]);
 
   const [loading, setLoading] = useState(true);
-  const [dbConnected, setDbConnected] = useState(false);
+  const [dbConnected, setDbConnected] = useState(true);
   const [connectionError, setConnectionError] = useState(null);
 
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    checkHealthAndLoadData();
+    loadInitialData();
   }, []);
 
-  const checkHealthAndLoadData = async () => {
-    setLoading(true);
-    setConnectionError(null);
-
-    try {
-      const healthResponse = await api.get('/api/health');
-      const isConnected = healthResponse.data.database?.state === 'connected';
-
-      setDbConnected(isConnected);
-
-      if (isConnected) {
-        await loadInitialData();
-      } else {
-        setConnectionError('Database not connected');
-      }
-    } catch (error) {
-      console.error('Health check failed:', error.message);
-      setConnectionError('Cannot connect to server');
-      setDbConnected(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const loadInitialData = async () => {
-    if (!dbConnected) return;
-
     setLoading(true);
 
     try {

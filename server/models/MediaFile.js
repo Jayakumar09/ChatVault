@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const mediaFileSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   contactId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contact', required: true },
   messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
   filename: { type: String, required: true },
@@ -12,6 +13,7 @@ const mediaFileSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+mediaFileSchema.index({ userId: 1 });
 mediaFileSchema.index({ contactId: 1 });
 mediaFileSchema.index({ type: 1 });
 

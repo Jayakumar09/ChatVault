@@ -3,15 +3,19 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dns from 'dns';
+
+dns.setDefaultResultOrder('ipv4first');
+
+dotenv.config();
 
 import connectDB, { disconnectDB } from './config/db.js';
+import authRoutes from './routes/authRoutes.js';
 import backupRoutes from './routes/backupRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
-
-dotenv.config();
 
 console.log('\n========================================');
 console.log('🚀 ChatVault Server Starting...');
@@ -30,6 +34,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/backups', express.static(path.join(__dirname, 'backups')));
 
+app.use('/api/auth', authRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/messages', messageRoutes);
@@ -100,14 +105,17 @@ const startServer = async () => {
     console.log(`📡 Database: ${dbConnected ? '✅ Connected' : '❌ Not Connected'}`);
     console.log('========================================\n');
     console.log('Available Routes:');
-    console.log('  GET  /api/health');
-    console.log('  GET  /');
-    console.log('  POST /api/backup/upload');
-    console.log('  POST /api/backup/parse');
-    console.log('  GET  /api/contacts');
-    console.log('  GET  /api/messages');
-    console.log('  GET  /api/media');
-    console.log('  GET  /api/analytics/dashboard');
+    console.log('  GET    /api/health');
+    console.log('  GET    /');
+    console.log('  POST   /api/auth/register');
+    console.log('  POST   /api/auth/login');
+    console.log('  GET    /api/auth/me');
+    console.log('  POST   /api/backup/upload');
+    console.log('  POST   /api/backup/parse');
+    console.log('  GET    /api/contacts');
+    console.log('  GET    /api/messages');
+    console.log('  GET    /api/media');
+    console.log('  GET    /api/analytics/dashboard');
     console.log('========================================\n');
   });
 

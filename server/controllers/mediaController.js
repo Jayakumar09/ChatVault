@@ -5,7 +5,7 @@ import fs from 'fs';
 export const getAllMedia = async (req, res) => {
   try {
     const { type, contactId, page = 1, limit = 30 } = req.query;
-    const query = {};
+    const query = { userId: req.userId };
     if (type) query.type = type;
     if (contactId) query.contactId = contactId;
 
@@ -28,13 +28,13 @@ export const getMediaByType = async (req, res) => {
     const { type } = req.params;
     const { page = 1, limit = 30 } = req.query;
 
-    const media = await MediaFile.find({ type })
+    const media = await MediaFile.find({ userId: req.userId, type })
       .populate('contactId', 'name')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
-    const total = await MediaFile.countDocuments({ type });
+    const total = await MediaFile.countDocuments({ userId: req.userId, type });
 
     res.json({ media, total, page: parseInt(page), totalPages: Math.ceil(total / limit) });
   } catch (error) {
@@ -45,7 +45,7 @@ export const getMediaByType = async (req, res) => {
 export const getMediaById = async (req, res) => {
   try {
     const { id } = req.params;
-    const media = await MediaFile.findById(id).populate('contactId', 'name');
+    const media = await MediaFile.findOne({ _id: id, userId: req.userId }).populate('contactId', 'name');
     if (!media) {
       return res.status(404).json({ error: 'Media not found' });
     }
@@ -58,7 +58,7 @@ export const getMediaById = async (req, res) => {
 export const downloadMedia = async (req, res) => {
   try {
     const { id } = req.params;
-    const media = await MediaFile.findById(id);
+    const media = await MediaFile.findOne({ _id: id, userId: req.userId });
     if (!media) {
       return res.status(404).json({ error: 'Media not found' });
     }
@@ -77,6 +77,7 @@ export const downloadMedia = async (req, res) => {
 export const getMediaStats = async (req, res) => {
   try {
     const stats = await MediaFile.aggregate([
+      { $match: { userId: req.userId } },
       {
         $group: {
           _id: '$type',

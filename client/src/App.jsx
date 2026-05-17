@@ -1,6 +1,11 @@
 import { useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { AuthProvider } from './context/AuthContext';
+import { AppProvider } from './context/AppContext';
+import ProtectedRoute from './components/routes/ProtectedRoute';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import Sidebar from './components/layout/Sidebar';
 import Navbar from './components/layout/Navbar';
 import RightPanel from './components/layout/RightPanel';
@@ -11,9 +16,8 @@ import Media from './pages/Media';
 import Timeline from './pages/Timeline';
 import Starred from './pages/Starred';
 import Settings from './pages/Settings';
-import { AppProvider } from './context/AppContext';
 
-function App() {
+function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [selectedContact, setSelectedContact] = useState(null);
@@ -36,7 +40,7 @@ function App() {
             <main className="flex-1 overflow-y-auto p-6">
               <AnimatePresence mode="wait">
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/contacts" element={<Contacts onSelectContact={setSelectedContact} />} />
                   <Route path="/contacts/:id" element={<Conversation />} />
                   <Route path="/media" element={<Media />} />
@@ -44,6 +48,7 @@ function App() {
                   <Route path="/timeline" element={<Timeline />} />
                   <Route path="/starred" element={<Starred />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </AnimatePresence>
             </main>
@@ -58,6 +63,25 @@ function App() {
         </div>
       </div>
     </AppProvider>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </AuthProvider>
   );
 }
 

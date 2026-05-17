@@ -1,59 +1,77 @@
 import mongoose from 'mongoose';
+import dns from 'dns';
+
+dns.setDefaultResultOrder('ipv4first');
+
+mongoose.set('debug', true);
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
 
 const connectDB = async (retries = MAX_RETRIES) => {
-  const mongoUri = process.env.MONGODB_URI;
+  const srvUri = process.env.MONGODB_URI?.trim();
 
-  if (!mongoUri) {
+  if (!srvUri) {
     throw new Error('MONGODB_URI environment variable is not defined');
   }
 
-  console.log(`\n📦 Attempting MongoDB Atlas connection...`);
+  const url = new URL(srvUri);
+  const username = url.username;
+  const password = url.password;
+
+  const shardHosts = 'cluster0-shard-00-00.sqj1i.mongodb.net:27017';
+
+  const fullUri = `mongodb://${username}:${password}@${shardHosts}/chatvault?ssl=true&authSource=admin&retryWrites=true&w=majority`;
+
+  console.log('\n========================================');
+  console.log('📦 MongoDB Connection');
+  console.log('========================================');
+  console.log(`   Host: ${shardHosts}`);
+  console.log(`   Type: mongodb (single host)`);
+  console.log('========================================\n');
 
   const options = {
-    maxPoolSize: 10,
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 15000,
     socketTimeoutMS: 45000,
+    maxPoolSize: 10,
+    family: 4,
   };
+
+  console.log('📋 Connection Options:', JSON.stringify(options, null, 2));
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const conn = await mongoose.connect(mongoUri, options);
+      console.log(`\n🔄 Attempt ${attempt}/${retries}: Connecting...`);
+      
+      const conn = await mongoose.connect(fullUri, options);
 
-      console.log(`✅ MongoDB Atlas Connected: ${conn.connection.host}`);
+      console.log('\n✅ MongoDB Atlas Connected!');
+      console.log(`   Host: ${conn.connection.host}`);
       console.log(`   Database: ${conn.connection.name}`);
-      console.log(`   State: ${conn.connection.readyState === 1 ? 'Connected' : 'Disconnected'}\n`);
+      console.log(`   State: ${conn.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
 
       mongoose.connection.on('error', (err) => {
         console.error(`❌ MongoDB Error: ${err.message}`);
       });
 
       mongoose.connection.on('disconnected', () => {
-        console.warn('⚠️ MongoDB Disconnected - Attempting reconnect...');
+        console.warn('⚠️ MongoDB Disconnected');
       });
 
       mongoose.connection.on('reconnected', () => {
-        console.log('✅ MongoDB Reconnected\n');
+        console.log('✅ MongoDB Reconnected');
       });
 
       return conn;
 
     } catch (error) {
-      console.error(`❌ Connection attempt ${attempt}/${retries} failed:`);
-      console.error(`   ${error.message}\n`);
+      console.error(`\n❌ Attempt ${attempt} failed: ${error.message}`);
 
       if (attempt < retries) {
-        console.log(`   Retrying in ${RETRY_DELAY / 1000} seconds...`);
+        console.log(`   Retrying in ${RETRY_DELAY / 1000}s...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
       } else {
-        console.error(`\n❌ All ${retries} connection attempts failed.`);
-        console.error(`   Please verify:\n`);
-        console.error(`   1. MongoDB Atlas cluster is running`);
-        console.error(`   2. Network allows connections`);
-        console.error(`   3. Username/Password are correct`);
-        console.error(`   4. IP address is whitelisted in Atlas\n`);
+        console.error('\n❌ All connection attempts failed.');
         throw error;
       }
     }
@@ -63,7 +81,7 @@ const connectDB = async (retries = MAX_RETRIES) => {
 const disconnectDB = async () => {
   try {
     await mongoose.disconnect();
-    console.log('✅ MongoDB Disconnected\n');
+    console.log('✅ MongoDB Disconnected');
   } catch (error) {
     console.error(`❌ Error disconnecting: ${error.message}`);
   }

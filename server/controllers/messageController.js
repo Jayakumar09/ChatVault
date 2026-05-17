@@ -4,7 +4,8 @@ import Contact from '../models/Contact.js';
 export const getAllMessages = async (req, res) => {
   try {
     const { page = 1, limit = 50, contactId } = req.query;
-    const query = contactId ? { contactId } : {};
+    const query = { userId: req.userId };
+    if (contactId) query.contactId = contactId;
 
     const messages = await Message.find(query)
       .populate('contactId', 'name avatar')
@@ -24,17 +25,11 @@ export const searchMessages = async (req, res) => {
   try {
     const { q, contactId, type, startDate, endDate, page = 1, limit = 20 } = req.query;
 
-    const query = {};
+    const query = { userId: req.userId };
 
-    if (q) {
-      query.content = { $regex: q, $options: 'i' };
-    }
-    if (contactId) {
-      query.contactId = contactId;
-    }
-    if (type) {
-      query.type = type;
-    }
+    if (q) query.content = { $regex: q, $options: 'i' };
+    if (contactId) query.contactId = contactId;
+    if (type) query.type = type;
     if (startDate || endDate) {
       query.timestamp = {};
       if (startDate) query.timestamp.$gte = new Date(startDate);
@@ -58,7 +53,7 @@ export const searchMessages = async (req, res) => {
 export const toggleStarMessage = async (req, res) => {
   try {
     const { id } = req.params;
-    const message = await Message.findById(id);
+    const message = await Message.findOne({ _id: id, userId: req.userId });
     if (!message) {
       return res.status(404).json({ error: 'Message not found' });
     }
@@ -73,13 +68,13 @@ export const toggleStarMessage = async (req, res) => {
 export const getStarredMessages = async (req, res) => {
   try {
     const { page = 1, limit = 50 } = req.query;
-    const messages = await Message.find({ isStarred: true })
+    const messages = await Message.find({ userId: req.userId, isStarred: true })
       .populate('contactId', 'name avatar')
       .sort({ timestamp: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
-    const total = await Message.countDocuments({ isStarred: true });
+    const total = await Message.countDocuments({ userId: req.userId, isStarred: true });
     res.json({ messages, total, page: parseInt(page), totalPages: Math.ceil(total / limit) });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -89,7 +84,7 @@ export const getStarredMessages = async (req, res) => {
 export const getMessageById = async (req, res) => {
   try {
     const { id } = req.params;
-    const message = await Message.findById(id).populate('contactId', 'name avatar');
+    const message = await Message.findOne({ _id: id, userId: req.userId }).populate('contactId', 'name avatar');
     if (!message) {
       return res.status(404).json({ error: 'Message not found' });
     }

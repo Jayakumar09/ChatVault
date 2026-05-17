@@ -1,10 +1,11 @@
 import express from 'express';
-import { getDashboardStats, getTimelineData, getActivityByHour } from '../controllers/analyticsController.js';
+import { getDashboardStats } from '../controllers/analyticsController.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
+router.use(authMiddleware);
+
 router.get('/dashboard', getDashboardStats);
-router.get('/timeline', getTimelineData);
-router.get('/activity', getActivityByHour);
 
 export default router;

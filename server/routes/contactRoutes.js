@@ -1,7 +1,10 @@
 import express from 'express';
 import { getAllContacts, getContactById, getContactMessages, getContactMedia, searchContacts } from '../controllers/contactController.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use(authMiddleware);
 
 router.get('/', getAllContacts);
 router.get('/search', searchContacts);

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const contactSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true },
   phone: { type: String, default: '' },
   avatar: { type: String, default: '' },
@@ -9,6 +10,9 @@ const contactSchema = new mongoose.Schema({
   lastMessageAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now }
 });
+
+contactSchema.index({ userId: 1 });
+contactSchema.index({ name: 'text' });
 
 contactSchema.index({ name: 'text' });
 

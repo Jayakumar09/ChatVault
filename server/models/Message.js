@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   contactId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contact', required: true },
   content: { type: String, required: true },
   timestamp: { type: Date, required: true },
@@ -9,6 +10,10 @@ const messageSchema = new mongoose.Schema({
   isStarred: { type: Boolean, default: false },
   metadata: { type: Object, default: {} }
 });
+
+messageSchema.index({ userId: 1 });
+messageSchema.index({ contactId: 1, timestamp: -1 });
+messageSchema.index({ content: 'text' });
 
 messageSchema.index({ contactId: 1, timestamp: -1 });
 messageSchema.index({ content: 'text' });

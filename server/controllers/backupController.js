@@ -17,7 +17,8 @@ const MAX_FILE_SIZE = 500 * 1024 * 1024;
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../backups');
+    const userId = req.userId?.toString() || 'public';
+    const uploadDir = path.join(__dirname, '../backups', userId);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -62,13 +63,15 @@ export const uploadBackup = async (req, res) => {
     console.log(`📁 Uploaded: ${req.file.originalname} (${fileSizeMB} MB)`);
 
     const existingBackup = await ChatBackup.findOne({
+      userId: req.userId,
       originalName: req.file.originalname,
       status: 'completed'
     });
 
     if (existingBackup) {
       console.log(`⚠️ Duplicate import detected: ${req.file.originalname}`);
-      fs.unlinkSync(path.join(__dirname, '../backups', req.file.filename));
+      const userId = req.userId?.toString() || 'public';
+      fs.unlinkSync(path.join(__dirname, '../backups', userId, req.file.filename));
       return res.status(409).json({
         error: 'This backup has already been imported',
         existing: {
@@ -81,6 +84,7 @@ export const uploadBackup = async (req, res) => {
     }
 
     const backup = new ChatBackup({
+      userId: req.userId,
       filename: req.file.filename,
       originalName: req.file.originalname,
       fileSize: req.file.size,
@@ -271,7 +275,7 @@ export const getBackupStatus = async (req, res) => {
       return res.status(400).json({ error: 'Backup ID is required' });
     }
 
-    const backup = await ChatBackup.findById(id);
+    const backup = await ChatBackup.findOne({ _id: id, userId: req.userId });
     if (!backup) {
       return res.status(404).json({ error: 'Backup not found' });
     }
@@ -300,7 +304,7 @@ export const getBackupStatus = async (req, res) => {
 
 export const getAllBackups = async (req, res) => {
   try {
-    const backups = await ChatBackup.find()
+    const backups = await ChatBackup.find({ userId: req.userId })
       .select('-error')
       .sort({ createdAt: -1 });
 
@@ -327,12 +331,13 @@ export const deleteBackup = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const backup = await ChatBackup.findById(id);
+    const backup = await ChatBackup.findOne({ _id: id, userId: req.userId });
     if (!backup) {
       return res.status(404).json({ error: 'Backup not found' });
     }
 
-    const zipPath = path.join(__dirname, '../backups', backup.filename);
+    const userId = req.userId?.toString() || 'public';
+    const zipPath = path.join(__dirname, '../backups', userId, backup.filename);
     if (fs.existsSync(zipPath)) {
       fs.unlinkSync(zipPath);
     }

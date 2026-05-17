@@ -5,12 +5,13 @@ import ChatBackup from '../models/ChatBackup.js';
 
 export const getDashboardStats = async (req, res) => {
   try {
-    const totalContacts = await Contact.countDocuments();
-    const totalMessages = await Message.countDocuments();
-    const totalMedia = await MediaFile.countDocuments();
-    const totalBackups = await ChatBackup.countDocuments();
+    const totalContacts = await Contact.countDocuments({ userId: req.userId });
+    const totalMessages = await Message.countDocuments({ userId: req.userId });
+    const totalMedia = await MediaFile.countDocuments({ userId: req.userId });
+    const totalBackups = await ChatBackup.countDocuments({ userId: req.userId });
 
     const mediaStats = await MediaFile.aggregate([
+      { $match: { userId: req.userId } },
       {
         $group: {
           _id: '$type',
@@ -23,6 +24,7 @@ export const getDashboardStats = async (req, res) => {
     const storageUsed = mediaStats.reduce((acc, item) => acc + item.totalSize, 0);
 
     const mostActiveContacts = await Message.aggregate([
+      { $match: { userId: req.userId } },
       { $group: { _id: '$contactId', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 5 },
@@ -39,11 +41,7 @@ export const getDashboardStats = async (req, res) => {
     ]);
 
     const messagesLast7Days = await Message.aggregate([
-      {
-        $match: {
-          timestamp: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-        }
-      },
+      { $match: { userId: req.userId, timestamp: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } },
       {
         $group: {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
