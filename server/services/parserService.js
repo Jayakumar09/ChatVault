@@ -274,34 +274,43 @@ export const extractMediaFiles = async (backupDir, backupId, userId, progressCal
           if (supportedExtensions.includes(ext)) {
             fileCount++;
 
+            console.log(`   📄 Found media: ${item} (${ext})`);
+
             if (fileCount % 10 === 0 && progressCallback) {
               progressCallback({ phase: 'Extracting media', count: fileCount });
             }
 
-            const type = extractMediaType(item);
-            const filename = `${uuidv4()}${ext}`;
-            const destPath = path.join(uploadDir, filename);
+            try {
+              const type = extractMediaType(item);
+              const filename = `${uuidv4()}${ext}`;
+              const destPath = path.join(uploadDir, filename);
 
-            fs.copyFileSync(fullPath, destPath);
+              fs.copyFileSync(fullPath, destPath);
+              console.log(`   💾 Copied to: ${destPath}`);
 
-            const mimetype = getMimeType(ext);
-            const size = stat.size;
+              const mimetype = getMimeType(ext);
+              const size = stat.size;
 
-            const mediaFile = new MediaFile({
-              userId,
-              filename,
-              originalName: item,
-              mimetype,
-              size,
-              path: `uploads/${userId}/${filename}`,
-              type,
-              metadata: {
-                backupId,
-                importedAt: new Date()
-              }
-            });
-            await mediaFile.save();
-            mediaFiles.push(mediaFile);
+              const mediaFile = new MediaFile({
+                userId,
+                filename,
+                originalName: item,
+                mimetype,
+                size,
+                path: `uploads/${userId}/${filename}`,
+                type,
+                metadata: {
+                  backupId,
+                  importedAt: new Date()
+                }
+              });
+              
+              await mediaFile.save();
+              console.log(`   ✅ Saved to MongoDB: ${mediaFile._id}`);
+              mediaFiles.push(mediaFile);
+            } catch (mediaError) {
+              console.error(`   ❌ Error saving media ${item}:`, mediaError.message);
+            }
           }
         }
       }
